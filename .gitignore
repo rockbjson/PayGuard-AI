@@ -1,0 +1,35 @@
+# Local Python environments
+.venv/
+venv/
+env/
+
+# Python caches and test artefacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+
+# Generated Bayesian sampler artefacts
+analysis/bayesian_trace.nc
+analysis/bayesian_advi_posterior.nc
+analysis/bayesian_advi_loss.npy
+
+# Intermediate files used only to build the Excel workbooks
+analysis/xlsx_data/
+
+# Local manuscript working copy; publish the final paper separately if desired
+paper/

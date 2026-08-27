@@ -1,0 +1,365 @@
+{
+  "baseline_hybrid_metrics": {
+    "precision": 0.8484848484848485,
+    "recall": 0.6666666666666666,
+    "f1": 0.7466666666666667,
+    "specificity": 0.993734335839599,
+    "false_positive_rate": 0.006265664160401002,
+    "roc_auc": 0.9817736305048335,
+    "average_precision": 0.7701663952070675,
+    "alert_rate": 0.039285714285714285,
+    "true_positives": 56,
+    "true_negatives": 1586,
+    "false_positives": 10,
+    "false_negatives": 28,
+    "alerts_per_1000": 39.285714285714285
+  },
+  "detection_by_anomaly_type": [
+    {
+      "anomaly_type": "bank_change",
+      "count": 10,
+      "detected": 10,
+      "detection_rate": 1.0
+    },
+    {
+      "anomaly_type": "currency_mismatch",
+      "count": 10,
+      "detected": 10,
+      "detection_rate": 1.0
+    },
+    {
+      "anomaly_type": "exact_duplicate",
+      "count": 6,
+      "detected": 0,
+      "detection_rate": 0.0
+    },
+    {
+      "anomaly_type": "invoice_above_po",
+      "count": 17,
+      "detected": 15,
+      "detection_rate": 0.8823529411764706
+    },
+    {
+      "anomaly_type": "near_duplicate",
+      "count": 13,
+      "detected": 2,
+      "detection_rate": 0.15384615384615385
+    },
+    {
+      "anomaly_type": "overpayment",
+      "count": 15,
+      "detected": 15,
+      "detection_rate": 1.0
+    },
+    {
+      "anomaly_type": "rapid_payment",
+      "count": 13,
+      "detected": 4,
+      "detection_rate": 0.3076923076923077
+    }
+  ],
+  "n_transactions": 5600,
+  "n_training_transactions": 3920,
+  "n_test_transactions": 1680,
+  "n_anomalies": 280,
+  "base_rate_pct": 5.0,
+  "regression": {
+    "model": "L2-penalised logistic regression",
+    "n_bootstrap_samples": 1000,
+    "auc_logit": 0.8889411027568923,
+    "auc_hybrid_rule_if": 0.9817736305048335,
+    "auc_isolation_forest_only": 0.8257362155388471,
+    "average_precision_logit": 0.7660479618586562,
+    "mcfadden_pseudo_r2": 0.4687462901066497,
+    "intercept": -3.8252710964374153,
+    "training_means": {
+      "log_amount": 8.720498965543623,
+      "paid_to_invoice": 1.002435851264447,
+      "invoice_to_po": 0.8619569596970676,
+      "days_to_pay": 46.389030612244895,
+      "terms_deviation": 0.2181122448979592
+    },
+    "training_standard_deviations": {
+      "log_amount": 1.220531874270108,
+      "paid_to_invoice": 0.03373411431956079,
+      "invoice_to_po": 0.0886075508637679,
+      "days_to_pay": 20.397665139113634,
+      "terms_deviation": 9.882758937825626
+    },
+    "coefficients": [
+      {
+        "feature": "currency_mismatch",
+        "coefficient": 5.829593526023575,
+        "odds_ratio": 340.220360239463,
+        "ci_low": 193.52484591551993,
+        "ci_high": 548.4963830318186
+      },
+      {
+        "feature": "bank_change",
+        "coefficient": 5.770917631675059,
+        "odds_ratio": 320.8320032192349,
+        "ci_low": 183.40633554460337,
+        "ci_high": 506.7685939750343
+      },
+      {
+        "feature": "paid_to_invoice",
+        "coefficient": 1.7187909320078072,
+        "odds_ratio": 5.577780469872474,
+        "ci_low": 3.4167409856924245,
+        "ci_high": 7.016676993257514
+      },
+      {
+        "feature": "invoice_to_po",
+        "coefficient": 0.6792282108471633,
+        "odds_ratio": 1.9723549025349971,
+        "ci_low": 1.6505949767763481,
+        "ci_high": 2.288967276676827
+      },
+      {
+        "feature": "weekend",
+        "coefficient": 0.13530663188282063,
+        "odds_ratio": 1.1448877896324126,
+        "ci_low": 0.8052340460214567,
+        "ci_high": 1.5828019525734875
+      },
+      {
+        "feature": "days_to_pay",
+        "coefficient": 0.07274033171855543,
+        "odds_ratio": 1.0754512400787195,
+        "ci_low": 0.8598766055490502,
+        "ci_high": 1.3001729761132361
+      },
+      {
+        "feature": "log_amount",
+        "coefficient": -0.009897191138342525,
+        "odds_ratio": 0.9901516248779854,
+        "ci_low": 0.8307002437804992,
+        "ci_high": 1.182062098911093
+      },
+      {
+        "feature": "terms_deviation",
+        "coefficient": -0.7506163611760823,
+        "odds_ratio": 0.4720754940448799,
+        "ci_low": 0.4006304181970735,
+        "ci_high": 0.5541000214317301
+      }
+    ]
+  },
+  "bayesian": {
+    "model": "Bayesian logistic regression using mean-field ADVI",
+    "features": [
+      "log_amount",
+      "paid_to_invoice",
+      "invoice_to_po",
+      "days_to_pay",
+      "terms_deviation",
+      "weekend"
+    ],
+    "excluded_complete_separation_features": [
+      "bank_change",
+      "currency_mismatch"
+    ],
+    "priors": {
+      "intercept": "Normal(0, 2.5)",
+      "coefficients": "Normal(0, 1.5)"
+    },
+    "inference_method": "Automatic Differentiation Variational Inference (ADVI)",
+    "advi_max_iterations": 30000,
+    "advi_iterations_completed": 30000,
+    "advi_final_loss": 657.4043451984617,
+    "posterior_draws": 4000,
+    "held_out_auc": 0.7483813700918964,
+    "held_out_average_precision": 0.543494035641954,
+    "held_out_brier_score": 0.033073267533025155,
+    "coefficient_summary": [
+      {
+        "feature": "log_amount",
+        "mean": 0.06404004232290268,
+        "standard_deviation": 0.08570399137392909,
+        "credible_interval_low": -0.10293835512439138,
+        "credible_interval_high": 0.2321788119668831,
+        "probability_effect_positive": 0.7785
+      },
+      {
+        "feature": "paid_to_invoice",
+        "mean": 2.119910352022552,
+        "standard_deviation": 0.6401724007317611,
+        "credible_interval_low": 0.8758878581830041,
+        "credible_interval_high": 3.3676877155549785,
+        "probability_effect_positive": 0.999
+      },
+      {
+        "feature": "invoice_to_po",
+        "mean": 0.534504573965753,
+        "standard_deviation": 0.06517536543392716,
+        "credible_interval_low": 0.40535488341182657,
+        "credible_interval_high": 0.6593558380889982,
+        "probability_effect_positive": 1.0
+      },
+      {
+        "feature": "days_to_pay",
+        "mean": 0.04525150038012066,
+        "standard_deviation": 0.08452713360601564,
+        "credible_interval_low": -0.12974149948787594,
+        "credible_interval_high": 0.21028961651719355,
+        "probability_effect_positive": 0.709
+      },
+      {
+        "feature": "terms_deviation",
+        "mean": -0.5566616738478577,
+        "standard_deviation": 0.06807600859264776,
+        "credible_interval_low": -0.6909877444768405,
+        "credible_interval_high": -0.4263862703539904,
+        "probability_effect_positive": 0.0
+      },
+      {
+        "feature": "weekend",
+        "mean": -0.024336179492850527,
+        "standard_deviation": 0.16875392726569718,
+        "credible_interval_low": -0.3516513176261402,
+        "credible_interval_high": 0.3034775700219594,
+        "probability_effect_positive": 0.44525
+      }
+    ],
+    "top10_posterior_predictive": [
+      {
+        "transaction_id": "TXN-0004977",
+        "supplier_category": "Aircraft Components",
+        "risk_score_hybrid": 58.8,
+        "bayes_prob_mean": 0.9977245433666936,
+        "bayes_prob_ci_low": 0.9998858496583651,
+        "bayes_prob_ci_high": 1.0,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0005192",
+        "supplier_category": "Aircraft Components",
+        "risk_score_hybrid": 58.3,
+        "bayes_prob_mean": 0.9976648780412757,
+        "bayes_prob_ci_low": 0.9998205765530911,
+        "bayes_prob_ci_high": 1.0,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0002707",
+        "supplier_category": "Aircraft Components",
+        "risk_score_hybrid": 58.1,
+        "bayes_prob_mean": 0.9975978422714118,
+        "bayes_prob_ci_low": 0.9995007311474577,
+        "bayes_prob_ci_high": 0.9999999999999998,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0003663",
+        "supplier_category": "Aircraft Components",
+        "risk_score_hybrid": 57.9,
+        "bayes_prob_mean": 0.9965782739991765,
+        "bayes_prob_ci_low": 0.9975869911113028,
+        "bayes_prob_ci_high": 0.9999999999999856,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0005173",
+        "supplier_category": "Professional Services",
+        "risk_score_hybrid": 57.3,
+        "bayes_prob_mean": 0.9906397995987267,
+        "bayes_prob_ci_low": 0.9355947042524816,
+        "bayes_prob_ci_high": 0.999999998830775,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0003916",
+        "supplier_category": "Facilities",
+        "risk_score_hybrid": 57.1,
+        "bayes_prob_mean": 0.0392519590609555,
+        "bayes_prob_ci_low": 0.02210778086539919,
+        "bayes_prob_ci_high": 0.0638400926928532,
+        "actually_anomalous": 0
+      },
+      {
+        "transaction_id": "TXN-0004050",
+        "supplier_category": "Professional Services",
+        "risk_score_hybrid": 56.5,
+        "bayes_prob_mean": 0.030644315281961248,
+        "bayes_prob_ci_low": 0.019164975121502944,
+        "bayes_prob_ci_high": 0.04619872220562289,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0000417",
+        "supplier_category": "Information Technology",
+        "risk_score_hybrid": 55.4,
+        "bayes_prob_mean": 0.036601214799062955,
+        "bayes_prob_ci_low": 0.020649636178624853,
+        "bayes_prob_ci_high": 0.05887195889932452,
+        "actually_anomalous": 0
+      },
+      {
+        "transaction_id": "TXN-0003773",
+        "supplier_category": "Ground Services",
+        "risk_score_hybrid": 55.3,
+        "bayes_prob_mean": 0.01762692111599334,
+        "bayes_prob_ci_low": 0.01015848084615407,
+        "bayes_prob_ci_high": 0.02842178070136251,
+        "actually_anomalous": 1
+      },
+      {
+        "transaction_id": "TXN-0000608",
+        "supplier_category": "Aircraft Components",
+        "risk_score_hybrid": 55.2,
+        "bayes_prob_mean": 0.04234482703130904,
+        "bayes_prob_ci_low": 0.025236483623704856,
+        "bayes_prob_ci_high": 0.06645476681548004,
+        "actually_anomalous": 1
+      }
+    ]
+  },
+  "bootstrap_flagged_exposure": {
+    "interpretation": "Bootstrap distribution of aggregate review exposure among held-out flagged payments; this is not a calibrated fraud-loss model.",
+    "n_simulations": 20000,
+    "n_flagged_payments": 66,
+    "mean_total_exposure_usd": 239221.29980699997,
+    "p5_usd": 171788.46949999998,
+    "median_usd": 234750.81,
+    "percentile_95_usd": 321995.03449999995,
+    "percentile_99_usd": 366775.6672999997,
+    "conditional_mean_above_95_usd": 348795.41608000005
+  },
+  "monte_carlo_working_capital": {
+    "interpretation": "Illustrative synthetic oracle scenario using known normal labels. Assumptions are not calibrated to a real organisation.",
+    "n_simulations": 20000,
+    "years_represented": 1.7138945927446954,
+    "annualised_spend_usd": 38782655.497823484,
+    "assumptions": {
+      "cost_of_capital": "Clipped Normal(mean=9%, sd=1.5%, bounds=3%-18%)",
+      "discount_capture_share": "Beta(6, 14)",
+      "discount_rate": "Truncated Normal(mean=2%, sd=0.4%)",
+      "discount_erosion": "Beta(4, 6)",
+      "supplier_friction_rate": "Beta(2, 40)",
+      "supplier_friction_cost": "Truncated Normal(mean=1.5%, sd=0.5%)"
+    },
+    "scenarios": {
+      "10": {
+        "mean_net_benefit_usd": -25171.303231232134,
+        "p10_usd": -102620.70418702647,
+        "p50_usd": -16382.041365400153,
+        "p90_usd": 41928.243287968595,
+        "prob_net_positive": 0.37195
+      },
+      "20": {
+        "mean_net_benefit_usd": 71310.04808001909,
+        "p10_usd": -14375.867532849596,
+        "p50_usd": 78448.54363233158,
+        "p90_usd": 147256.0015003012,
+        "prob_net_positive": 0.86725
+      },
+      "30": {
+        "mean_net_benefit_usd": 166904.8587584507,
+        "p10_usd": 71271.97893504989,
+        "p50_usd": 172574.93180036344,
+        "p90_usd": 256041.6006809181,
+        "prob_net_positive": 0.97815
+      }
+    }
+  }
+}
