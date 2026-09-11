@@ -1,4 +1,4 @@
-# PayGuard AI — Technical Overview
+# PayGuard AI - Technical Overview
 
 ## Executive summary
 
@@ -92,7 +92,7 @@ The supervised regression is an analytical layer and benchmark; it does not repl
 
 ## Bayesian uncertainty analysis
 
-Bayesian logistic regression extends the point-estimate analysis by estimating posterior distributions for model parameters and transaction-level predictions. Weakly informative normal priors are used, and posterior inference is performed with PyMC's No-U-Turn Sampler.
+Bayesian logistic regression extends the point-estimate analysis by estimating posterior distributions for model parameters and transaction-level predictions. Weakly informative normal priors are used, and approximate posterior inference is performed using PyMC’s mean-field Automatic Differentiation Variational Inference (ADVI).
 
 The analysis reports posterior means, credible intervals, coefficient-sign probabilities, convergence diagnostics, posterior predictive probabilities, and probabilistic performance measures including Brier score.
 
