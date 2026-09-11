@@ -180,7 +180,7 @@ The dashboard is an operational demonstration. The formal research evaluation is
 - ROC-AUC and average precision on held-out data;
 - Bayesian logistic regression using PyMC;
 - posterior coefficient distributions and credible intervals;
-- NUTS convergence diagnostics;
+- ADVI optimisation-loss history and approximate posterior summaries;
 - held-out posterior predictive probabilities;
 - Brier score for probabilistic predictions;
 - 20,000-replication bootstrap simulation of aggregate review exposure; and
