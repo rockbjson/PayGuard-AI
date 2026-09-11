@@ -1,4 +1,4 @@
-# PayGuard AI — Statistical Analysis
+# PayGuard AI - Statistical Analysis
 
 This directory contains the research-analysis layer for PayGuard AI. It extends the hybrid rule-based and Isolation Forest detector with interpretable regression, Bayesian uncertainty estimation, supplementary evaluation figures, and financial simulation.
 
