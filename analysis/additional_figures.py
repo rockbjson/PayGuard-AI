@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import io
 from pathlib import Path
 
 import arviz as az
@@ -49,6 +50,15 @@ CONTINUOUS_COLUMNS = [
 BAYES_COLUMNS = CONTINUOUS_COLUMNS + [
     "weekend",
 ]
+
+
+def _save_png(figure, path, **kwargs):
+    """Complete PNG encoding in memory before atomically replacing the file."""
+    buffer = io.BytesIO()
+    figure.savefig(buffer, format="png", **kwargs)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_bytes(buffer.getvalue())
+    temporary.replace(path)
 
 
 def _standardise(
@@ -152,25 +162,24 @@ def main() -> None:
 
     # Statistical interpretation and uncertainty layer.
     box(0.10, 0.48, "Labelled synthetic\ntraining data")
-    box(0.34, 0.48, "Logistic regression\n(associations + odds ratios)")
-    box(0.62, 0.48, "Bayesian logistic regression\n(posterior uncertainty)")
-    box(0.88, 0.48, "Held-out predictive\nassessment")
-    arrow(0.18, 0.48, 0.25, 0.48)
-    arrow(0.44, 0.48, 0.51, 0.48)
-    arrow(0.73, 0.48, 0.79, 0.48)
+    box(0.44, 0.53, "Logistic regression\n(associations + odds ratios)")
+    box(0.44, 0.39, "Bayesian logistic regression\n(approximate posterior uncertainty)")
+    box(0.84, 0.48, "Held-out predictive\nassessment")
+    arrow(0.18, 0.49, 0.33, 0.53)
+    arrow(0.18, 0.46, 0.33, 0.40)
+    arrow(0.57, 0.53, 0.76, 0.49)
+    arrow(0.59, 0.40, 0.76, 0.46)
 
     # Financial decision-support layer.
-    box(0.16, 0.16, "Held-out alerted\ntransactions")
-    box(0.41, 0.16, "Bootstrap aggregate\nreview exposure")
-    box(0.66, 0.16, "Working-capital Monte Carlo\n(DPO scenarios)")
-    box(0.90, 0.16, "Financial decision\nsupport")
-    arrow(0.24, 0.16, 0.32, 0.16)
-    arrow(0.49, 0.16, 0.57, 0.16)
-    arrow(0.75, 0.16, 0.83, 0.16)
-
-    # Cross-layer links showing where the financial layer receives information.
-    arrow(0.91, 0.77, 0.22, 0.22, colour=GREY)
-    arrow(0.31, 0.77, 0.62, 0.22, colour=GREY)
+    box(0.16, 0.19, "Held-out alerted\ntransactions")
+    box(0.49, 0.19, "Bootstrap aggregate\nreview exposure")
+    box(0.16, 0.06, "Ground-truth normal\nsynthetic payments")
+    box(0.49, 0.06, "Working-capital Monte Carlo\n(illustrative DPO assumptions)")
+    box(0.88, 0.13, "Financial decision\nsupport")
+    arrow(0.25, 0.19, 0.39, 0.19)
+    arrow(0.25, 0.06, 0.37, 0.06)
+    arrow(0.59, 0.19, 0.80, 0.15)
+    arrow(0.62, 0.06, 0.80, 0.11)
 
     axis.text(
         0.02,
@@ -201,7 +210,7 @@ def main() -> None:
     )
     axis.set_title("PayGuard AI framework architecture", fontsize=14, pad=18)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "07_system_architecture.png", dpi=180, bbox_inches="tight")
+    figure.savefig(CHART_DIR / "07_system_architecture.png", dpi=600, bbox_inches="tight")
     plt.close(figure)
 
     # 08: Dataset composition.
@@ -212,7 +221,7 @@ def main() -> None:
     axis.set_xlabel("Transactions")
     axis.set_title("Synthetic dataset composition")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "08_dataset_composition.png", dpi=160)
+    figure.savefig(CHART_DIR / "08_dataset_composition.png", dpi=600)
     plt.close(figure)
 
     # 09: Feature separation on held-out data.
@@ -230,7 +239,7 @@ def main() -> None:
         axis.set_title(feature)
     figure.suptitle("Held-out feature distributions by synthetic class")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "09_feature_separation.png", dpi=160)
+    figure.savefig(CHART_DIR / "09_feature_separation.png", dpi=600)
     plt.close(figure)
 
     # 10: Correlation matrix from training features only.
@@ -244,7 +253,7 @@ def main() -> None:
     figure.colorbar(image, ax=axis)
     axis.set_title("Training-feature correlation matrix")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "10_correlation_heatmap.png", dpi=160)
+    _save_png(figure, CHART_DIR / "10_correlation_heatmap.png", dpi=600)
     plt.close(figure)
 
     # 11: Held-out risk-score distribution.
@@ -270,13 +279,14 @@ def main() -> None:
     axis.set_title("Held-out risk-score distribution")
     axis.legend()
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "11_score_distribution.png", dpi=160)
+    figure.savefig(CHART_DIR / "11_score_distribution.png", dpi=600)
     plt.close(figure)
 
     # 12: Precision-recall curves.
     figure, axis = plt.subplots(figsize=(6.2, 5))
     score_sets = [
         ("Hybrid", scored_test["risk_score"].to_numpy()),
+        ("Rule score only", scored_test["rule_score"].to_numpy()),
         ("Isolation Forest", scored_test["ml_anomaly_score"].to_numpy()),
         ("Logistic regression", logistic_probability),
     ]
@@ -290,7 +300,7 @@ def main() -> None:
     axis.set_title("Held-out precision-recall curves")
     axis.legend(fontsize=8.5)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "12_precision_recall.png", dpi=160)
+    figure.savefig(CHART_DIR / "12_precision_recall.png", dpi=600)
     plt.close(figure)
 
     # 13: Held-out confusion matrix.
@@ -306,7 +316,7 @@ def main() -> None:
     axis.set_title("Held-out confusion matrix")
     figure.colorbar(image, ax=axis)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "13_confusion_matrix.png", dpi=160)
+    figure.savefig(CHART_DIR / "13_confusion_matrix.png", dpi=600)
     plt.close(figure)
 
     # 14: Held-out detection by anomaly type.
@@ -317,7 +327,7 @@ def main() -> None:
     axis.set_xlabel("Detection rate")
     axis.set_title("Held-out detection by planted anomaly type")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "14_detection_by_anomaly.png", dpi=160)
+    figure.savefig(CHART_DIR / "14_detection_by_anomaly.png", dpi=600)
     plt.close(figure)
 
     # 15: Threshold sensitivity on held-out scores.
@@ -352,7 +362,7 @@ def main() -> None:
     axis.set_title("Held-out threshold sensitivity")
     axis.legend()
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "15_threshold_sensitivity.png", dpi=160)
+    _save_png(figure, CHART_DIR / "15_threshold_sensitivity.png", dpi=600)
     plt.close(figure)
 
     # 16 and 17: ADVI convergence and held-out calibration.
@@ -374,7 +384,7 @@ def main() -> None:
     axis.set_ylabel("Variational loss")
     axis.set_title("ADVI optimisation convergence")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "16_advi_convergence.png", dpi=160)
+    figure.savefig(CHART_DIR / "16_advi_convergence.png", dpi=600)
     plt.close(figure)
 
     posterior_intercept = trace.posterior["intercept"].values.reshape(-1, 1)
@@ -400,7 +410,7 @@ def main() -> None:
     axis.set_title("Held-out probability calibration")
     axis.legend()
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "17_calibration.png", dpi=160)
+    figure.savefig(CHART_DIR / "17_calibration.png", dpi=600)
     plt.close(figure)
 
     print(f"Supplementary figures saved to {CHART_DIR}")

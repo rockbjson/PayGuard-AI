@@ -66,12 +66,30 @@
   "regression": {
     "model": "L2-penalised logistic regression",
     "n_bootstrap_samples": 1000,
+    "bootstrap_audit": {
+      "attempts": 1000,
+      "accepted": 1000,
+      "rejected": {
+        "one_class": 0,
+        "value_error": 0,
+        "nonconverged": 0,
+        "nonfinite": 0
+      },
+      "random_seed": 7,
+      "sampling_unit": "training transaction row",
+      "rows_per_resample": 3920,
+      "preprocessing": "fixed training scaling",
+      "interval_method": "percentile 2.5 and 97.5, exponentiated for odds ratios",
+      "separation": "L2 regularisation; no explicit separation test"
+    },
     "auc_logit": 0.8889411027568923,
     "auc_hybrid_rule_if": 0.9817736305048335,
     "auc_isolation_forest_only": 0.8257362155388471,
+    "auc_rule_score_only": 0.9892625910013129,
+    "average_precision_rule_score_only": 0.680090430278082,
     "average_precision_logit": 0.7660479618586562,
     "mcfadden_pseudo_r2": 0.4687462901066497,
-    "intercept": -3.8252710964374153,
+    "intercept": -3.8252710964374157,
     "training_means": {
       "log_amount": 8.720498965543623,
       "paid_to_invoice": 1.002435851264447,
@@ -89,59 +107,59 @@
     "coefficients": [
       {
         "feature": "currency_mismatch",
-        "coefficient": 5.829593526023575,
-        "odds_ratio": 340.220360239463,
-        "ci_low": 193.52484591551993,
-        "ci_high": 548.4963830318186
+        "coefficient": 5.829593526023578,
+        "odds_ratio": 340.2203602394639,
+        "ci_low": 193.5248459155196,
+        "ci_high": 548.4963830318122
       },
       {
         "feature": "bank_change",
-        "coefficient": 5.770917631675059,
-        "odds_ratio": 320.8320032192349,
-        "ci_low": 183.40633554460337,
-        "ci_high": 506.7685939750343
+        "coefficient": 5.770917631675058,
+        "odds_ratio": 320.8320032192346,
+        "ci_low": 183.40633554460484,
+        "ci_high": 506.7685939750348
       },
       {
         "feature": "paid_to_invoice",
-        "coefficient": 1.7187909320078072,
-        "odds_ratio": 5.577780469872474,
-        "ci_low": 3.4167409856924245,
-        "ci_high": 7.016676993257514
+        "coefficient": 1.718790932007804,
+        "odds_ratio": 5.577780469872457,
+        "ci_low": 3.4167409856924382,
+        "ci_high": 7.016676993257557
       },
       {
         "feature": "invoice_to_po",
-        "coefficient": 0.6792282108471633,
-        "odds_ratio": 1.9723549025349971,
-        "ci_low": 1.6505949767763481,
-        "ci_high": 2.288967276676827
+        "coefficient": 0.6792282108471632,
+        "odds_ratio": 1.972354902534997,
+        "ci_low": 1.650594976776348,
+        "ci_high": 2.2889672766768268
       },
       {
         "feature": "weekend",
-        "coefficient": 0.13530663188282063,
-        "odds_ratio": 1.1448877896324126,
-        "ci_low": 0.8052340460214567,
-        "ci_high": 1.5828019525734875
+        "coefficient": 0.13530663188281938,
+        "odds_ratio": 1.144887789632411,
+        "ci_low": 0.8052340460214482,
+        "ci_high": 1.582801952573463
       },
       {
         "feature": "days_to_pay",
-        "coefficient": 0.07274033171855543,
-        "odds_ratio": 1.0754512400787195,
-        "ci_low": 0.8598766055490502,
-        "ci_high": 1.3001729761132361
+        "coefficient": 0.07274033171855535,
+        "odds_ratio": 1.0754512400787193,
+        "ci_low": 0.8598766055490478,
+        "ci_high": 1.3001729761132383
       },
       {
         "feature": "log_amount",
-        "coefficient": -0.009897191138342525,
-        "odds_ratio": 0.9901516248779854,
-        "ci_low": 0.8307002437804992,
-        "ci_high": 1.182062098911093
+        "coefficient": -0.009897191138342577,
+        "odds_ratio": 0.9901516248779852,
+        "ci_low": 0.8307002437805036,
+        "ci_high": 1.1820620989111568
       },
       {
         "feature": "terms_deviation",
-        "coefficient": -0.7506163611760823,
-        "odds_ratio": 0.4720754940448799,
-        "ci_low": 0.4006304181970735,
-        "ci_high": 0.5541000214317301
+        "coefficient": -0.7506163611760825,
+        "odds_ratio": 0.4720754940448798,
+        "ci_low": 0.40063041819707196,
+        "ci_high": 0.5541000214317287
       }
     ]
   },
@@ -333,10 +351,10 @@
     "assumptions": {
       "cost_of_capital": "Clipped Normal(mean=9%, sd=1.5%, bounds=3%-18%)",
       "discount_capture_share": "Beta(6, 14)",
-      "discount_rate": "Truncated Normal(mean=2%, sd=0.4%)",
+      "discount_rate": "Clipped Normal(mean=2%, sd=0.4%, bounds=0.5%-5%)",
       "discount_erosion": "Beta(4, 6)",
       "supplier_friction_rate": "Beta(2, 40)",
-      "supplier_friction_cost": "Truncated Normal(mean=1.5%, sd=0.5%)"
+      "supplier_friction_cost": "Clipped Normal(mean=1.5%, sd=0.5%, bounds=0%-5%)"
     },
     "scenarios": {
       "10": {

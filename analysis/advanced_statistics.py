@@ -30,6 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import (
     average_precision_score,
     brier_score_loss,
@@ -131,6 +132,7 @@ def _bootstrap_logistic_coefficients(
     successful: list[np.ndarray] = []
     attempts = 0
     maximum_attempts = n_bootstraps * 3
+    audit = {"one_class": 0, "value_error": 0, "nonconverged": 0, "nonfinite": 0}
 
     while len(successful) < n_bootstraps and attempts < maximum_attempts:
         attempts += 1
@@ -138,6 +140,7 @@ def _bootstrap_logistic_coefficients(
         sampled_y = y_array[indices]
 
         if np.unique(sampled_y).size < 2:
+            audit["one_class"] += 1
             continue
 
         model = LogisticRegression(
@@ -148,11 +151,29 @@ def _bootstrap_logistic_coefficients(
         )
 
         try:
-            model.fit(x_array[indices], sampled_y)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", ConvergenceWarning)
+                model.fit(x_array[indices], sampled_y)
         except ValueError:
+            audit["value_error"] += 1
+            continue
+
+        if any(issubclass(w.category, ConvergenceWarning) for w in caught):
+            audit["nonconverged"] += 1
+            continue
+        if not np.isfinite(model.coef_).all():
+            audit["nonfinite"] += 1
             continue
 
         successful.append(model.coef_[0])
+
+    _bootstrap_logistic_coefficients.last_audit = {
+        "attempts": attempts, "accepted": len(successful), "rejected": audit,
+        "random_seed": random_state, "sampling_unit": "training transaction row",
+        "rows_per_resample": n_rows, "preprocessing": "fixed training scaling",
+        "interval_method": "percentile 2.5 and 97.5, exponentiated for odds ratios",
+        "separation": "L2 regularisation; no explicit separation test",
+    }
 
     if len(successful) < n_bootstraps:
         raise RuntimeError(
@@ -198,6 +219,7 @@ def _save_roc_chart(
     logistic_scores: np.ndarray,
     hybrid_scores: pd.Series,
     isolation_scores: pd.Series,
+    rule_scores: pd.Series,
 ) -> None:
     """Save the held-out ROC comparison chart."""
     figure, axis = plt.subplots(figsize=(6.2, 5))
@@ -206,6 +228,7 @@ def _save_roc_chart(
         ("Logistic regression", logistic_scores, NAVY),
         ("Hybrid rule + Isolation Forest", hybrid_scores, GOLD),
         ("Isolation Forest only", isolation_scores, GREY),
+        ("Rule score only", rule_scores, RED),
     ]
 
     for label, scores, colour in series:
@@ -225,7 +248,7 @@ def _save_roc_chart(
     axis.set_title("Held-out ROC comparison")
     axis.legend(loc="lower right", fontsize=8.5)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "01_roc_comparison.png", dpi=160)
+    figure.savefig(CHART_DIR / "01_roc_comparison.png", dpi=600)
     plt.close(figure)
 
 
@@ -257,7 +280,7 @@ def _save_odds_ratio_chart(coefficient_table: pd.DataFrame) -> None:
     axis.set_xlabel("Odds ratio (log scale), bootstrap 95% interval")
     axis.set_title("Logistic regression risk-factor associations")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "02_odds_ratios.png", dpi=160)
+    figure.savefig(CHART_DIR / "02_odds_ratios.png", dpi=600)
     plt.close(figure)
 
 
@@ -303,7 +326,7 @@ def _save_bayesian_forest_chart(
     axis.set_xlabel("Approximate posterior coefficient, 95% credible interval")
     axis.set_title("Bayesian logistic-regression approximate posterior effects")
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "03_bayesian_posterior_forest.png", dpi=160)
+    figure.savefig(CHART_DIR / "03_bayesian_posterior_forest.png", dpi=600)
     plt.close(figure)
 
 
@@ -347,7 +370,7 @@ def _save_top_bayesian_chart(top_summary: pd.DataFrame) -> None:
     axis.set_title("Highest-risk held-out payments: Bayesian uncertainty")
     axis.set_xlim(0, 1)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "04_bayesian_top10_predictions.png", dpi=160)
+    figure.savefig(CHART_DIR / "04_bayesian_top10_predictions.png", dpi=600)
     plt.close(figure)
 
 
@@ -387,7 +410,7 @@ def _save_exposure_chart(
     figure.tight_layout()
     figure.savefig(
     CHART_DIR / "05_bootstrap_review_exposure.png",
-    dpi=160,
+    dpi=600,
 )
     plt.close(figure)
 
@@ -414,7 +437,7 @@ def _save_working_capital_chart(results: dict[int, np.ndarray]) -> None:
     axis.set_title("Illustrative working-capital scenarios")
     axis.legend(fontsize=8.5)
     figure.tight_layout()
-    figure.savefig(CHART_DIR / "06_montecarlo_working_capital.png", dpi=160)
+    figure.savefig(CHART_DIR / "06_montecarlo_working_capital.png", dpi=600)
     plt.close(figure)
 
 
@@ -477,6 +500,7 @@ def main() -> None:
         training_data=train_data,
     )
     scored_test = scored_all.loc[test_index].copy()
+    scored_test.to_csv(ROOT / "analysis" / "held_out_scores.csv", index=True, index_label="source_row_index")
 
     baseline_metrics = evaluate_alerts(scored_test)
     anomaly_type_metrics = evaluate_by_anomaly_type(scored_test)
@@ -535,6 +559,8 @@ def main() -> None:
 
     hybrid_test_scores = scored_test.loc[x_test.index, "risk_score"]
     isolation_test_scores = scored_test.loc[x_test.index, "ml_anomaly_score"]
+    rule_test_scores = scored_test.loc[x_test.index, "rule_score"]
+    rule_auc = roc_auc_score(y_test, rule_test_scores)
     hybrid_auc = roc_auc_score(y_test, hybrid_test_scores)
     isolation_auc = roc_auc_score(y_test, isolation_test_scores)
 
@@ -568,9 +594,12 @@ def main() -> None:
     results["regression"] = {
         "model": "L2-penalised logistic regression",
         "n_bootstrap_samples": 1_000,
+        "bootstrap_audit": _bootstrap_logistic_coefficients.last_audit,
         "auc_logit": float(logistic_auc),
         "auc_hybrid_rule_if": float(hybrid_auc),
         "auc_isolation_forest_only": float(isolation_auc),
+        "auc_rule_score_only": float(rule_auc),
+        "average_precision_rule_score_only": float(average_precision_score(y_test, rule_test_scores)),
         "average_precision_logit": float(logistic_average_precision),
         "mcfadden_pseudo_r2": float(pseudo_r2),
         "intercept": float(logistic_model.intercept_[0]),
@@ -594,6 +623,7 @@ def main() -> None:
         logistic_probability,
         hybrid_test_scores,
         isolation_test_scores,
+        rule_test_scores,
     )
     _save_odds_ratio_chart(coefficient_table)
 
@@ -615,34 +645,34 @@ def main() -> None:
         diff="absolute",
     )
 
-    with pm.Model() as bayesian_model:
-        intercept = pm.Normal("intercept", mu=0, sigma=2.5)
-        beta = pm.Normal("beta", mu=0, sigma=1.5, shape=len(BAYES_COLUMNS))
-        logits = intercept + pm.math.dot(x_bayes_train, beta)
-        pm.Bernoulli("obs", logit_p=logits, observed=y_bayes_train)
-
-        approximation = pm.fit(
-            n=advi_max_iterations,
-            method="advi",
-            random_seed=42,
-            progressbar=True,
-            callbacks=[convergence_callback],
-        )
-        trace = approximation.sample(
-            draws=posterior_draws,
-            random_seed=42,
-            return_inferencedata=True,
-        )
-
-    az.to_netcdf(trace, POSTERIOR_PATH)
-    advi_loss = np.asarray(approximation.hist, dtype=float)
-    np.save(ADVI_LOSS_PATH, advi_loss)
+    if os.environ.get("PAYGUARD_REUSE_POSTERIOR") == "1":
+        trace = az.from_netcdf(POSTERIOR_PATH)
+        advi_loss = np.load(ADVI_LOSS_PATH)
+    else:
+        with pm.Model() as bayesian_model:
+            intercept = pm.Normal("intercept", mu=0, sigma=2.5)
+            beta = pm.Normal("beta", mu=0, sigma=1.5, shape=len(BAYES_COLUMNS))
+            logits = intercept + pm.math.dot(x_bayes_train, beta)
+            pm.Bernoulli("obs", logit_p=logits, observed=y_bayes_train)
+    
+            approximation = pm.fit(
+                n=advi_max_iterations,
+                method="advi",
+                random_seed=42,
+                progressbar=True,
+                callbacks=[convergence_callback],
+            )
+            trace = approximation.sample(
+                draws=posterior_draws,
+                random_seed=42,
+                return_inferencedata=True,
+            )
+    
+        az.to_netcdf(trace, POSTERIOR_PATH)
+        advi_loss = np.asarray(approximation.hist, dtype=float)
+        np.save(ADVI_LOSS_PATH, advi_loss)
     advi_iterations_completed = int(len(advi_loss))
-
-    posterior_beta = trace.posterior["beta"].values.reshape(
-        -1,
-        len(BAYES_COLUMNS),
-    )
+    posterior_beta = trace.posterior["beta"].values.reshape(-1, len(BAYES_COLUMNS))
     posterior_intercept = trace.posterior["intercept"].values.reshape(-1)
 
     beta_summary = []
@@ -888,10 +918,10 @@ def main() -> None:
         "assumptions": {
             "cost_of_capital": "Clipped Normal(mean=9%, sd=1.5%, bounds=3%-18%)",
             "discount_capture_share": "Beta(6, 14)",
-            "discount_rate": "Truncated Normal(mean=2%, sd=0.4%)",
+            "discount_rate": "Clipped Normal(mean=2%, sd=0.4%, bounds=0.5%-5%)",
             "discount_erosion": "Beta(4, 6)",
             "supplier_friction_rate": "Beta(2, 40)",
-            "supplier_friction_cost": "Truncated Normal(mean=1.5%, sd=0.5%)",
+            "supplier_friction_cost": "Clipped Normal(mean=1.5%, sd=0.5%, bounds=0%-5%)",
         },
         "scenarios": {
             str(days): {
