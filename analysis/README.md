@@ -48,23 +48,37 @@ L2 regularisation is used to improve stability where synthetic indicators produc
 
 ## Bayesian logistic regression
 
-The Bayesian model estimates posterior distributions for five standardised continuous predictors and three binary indicators. Weakly informative normal priors are used for the intercept and coefficients.
+The Bayesian model uses six predictors: log payment amount, paid-to-invoice ratio, invoice-to-PO ratio, days to pay, payment-term deviation, and the weekend-payment indicator. Recent bank-account change and currency mismatch are excluded because they deterministically separate planted anomaly outcomes in the synthetic dataset.
 
-Posterior inference uses PyMC's No-U-Turn Sampler (NUTS). The analysis records:
+The intercept has a Normal prior with mean 0 and standard deviation 2.5. Each predictor coefficient has a Normal prior with mean 0 and standard deviation 1.5.
 
-- posterior means;
-- posterior standard deviations;
-- 95% credible intervals;
-- probability that each coefficient is positive;
-- R-hat convergence diagnostics;
-- effective sample sizes;
-- sampler divergences;
+Approximate posterior inference uses PyMC's mean-field Automatic Differentiation Variational Inference (ADVI), with a maximum of 30,000 optimisation iterations and random seed 42. A parameter-convergence callback checks absolute changes every 100 iterations using a tolerance of 1e-4. The recorded original run completed all 30,000 iterations; this alone does not establish that the convergence criterion was satisfied.
+
+After optimisation, 4,000 draws are generated from the variational posterior using random seed 42. Approximate 95% credible intervals use the 2.5th and 97.5th percentiles of these draws.
+
+The analysis records:
+
+- ADVI optimisation-loss history;
+- approximate posterior means and standard deviations;
+- approximate 95% credible intervals;
+- posterior probability that each coefficient is positive;
 - held-out posterior predictive probabilities;
 - ROC-AUC;
 - average precision; and
 - Brier score.
 
-Generated sampler files such as NetCDF traces are local analysis artefacts and are intentionally excluded from Git by the repository `.gitignore`.
+This analysis does not use NUTS. R-hat, MCMC effective sample sizes, and sampler divergences are therefore not reported.
+
+The original saved posterior metadata records PyMC 5.26.1 and ArviZ 0.23.4. The subsequent reproducibility audit reused that posterior rather than performing a fresh Bayesian fit. The audit environment is documented separately in Supplementary File S1.
+
+The saved Bayesian outputs are:
+
+- `analysis/bayesian_advi_posterior.nc`
+- `analysis/bayesian_advi_loss.npy`
+
+These files are supplied in Supplementary File S1. If they are absent from a repository download, copy them into the `analysis/` directory before using saved-posterior mode.
+
+By default, `python analysis/advanced_statistics.py` performs a fresh Bayesian fit and writes new posterior files and derived outputs. Setting `PAYGUARD_REUSE_POSTERIOR=1` reuses the saved posterior and loss history instead. Reuse is appropriate only with the unchanged supplied dataset, feature definitions, and training/test split.
 
 ## Review-exposure bootstrap
 
