@@ -8,10 +8,10 @@ All supplier and payment records in this repository are synthetic. The project i
 
 The project contains four connected analytical layers:
 
-1. **Hybrid detection** — transparent business rules are combined with an Isolation Forest anomaly percentile to prioritise suspicious payments.
-2. **Interpretable statistical analysis** — L2-penalised logistic regression estimates associations between transaction features and planted anomaly labels, with odds ratios and bootstrap intervals.
-3. **Bayesian uncertainty analysis** — Bayesian logistic regression estimates posterior distributions and transaction-level predictive uncertainty.
-4. **Financial decision support** — review-exposure bootstrapping and Monte Carlo working-capital simulation translate analytical outputs into illustrative financial scenarios.
+1. **Hybrid detection** - transparent business rules are combined with an Isolation Forest anomaly percentile to prioritise suspicious payments.
+2. **Interpretable statistical analysis** - L2-penalised logistic regression estimates associations between transaction features and planted anomaly labels, with odds ratios and bootstrap intervals.
+3. **Bayesian uncertainty analysis** - Bayesian logistic regression estimates posterior distributions and transaction-level predictive uncertainty.
+4. **Financial decision support** - review-exposure bootstrapping and Monte Carlo working-capital simulation translate analytical outputs into illustrative financial scenarios.
 
 ## Detection logic
 
