@@ -225,13 +225,13 @@ def _save_roc_chart(
     figure, axis = plt.subplots(figsize=(6.2, 5))
 
     series = [
-        ("Logistic regression", logistic_scores, NAVY),
-        ("Hybrid rule + Isolation Forest", hybrid_scores, GOLD),
-        ("Isolation Forest only", isolation_scores, GREY),
-        ("Rule score only", rule_scores, RED),
+    ("Logistic regression", logistic_scores, NAVY, "-"),
+    ("Hybrid rule + Isolation Forest", hybrid_scores, GOLD, "--"),
+    ("Isolation Forest only", isolation_scores, GREY, ":"),
+    ("Rule score only", rule_scores, RED, "-."),
     ]
 
-    for label, scores, colour in series:
+    for label, scores, colour, line_style in series:
         false_positive_rate, true_positive_rate, _ = roc_curve(y_test, scores)
         auc_value = roc_auc_score(y_test, scores)
         axis.plot(
@@ -239,13 +239,13 @@ def _save_roc_chart(
             true_positive_rate,
             label=f"{label} (AUC={auc_value:.3f})",
             color=colour,
+            linestyle=line_style,
             linewidth=2.2,
         )
 
     axis.plot([0, 1], [0, 1], "--", color="#BBBBBB", linewidth=1)
     axis.set_xlabel("False Positive Rate")
     axis.set_ylabel("True Positive Rate")
-    axis.set_title("Held-out ROC comparison")
     axis.legend(loc="lower right", fontsize=8.5)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "01_roc_comparison.png", dpi=600)
@@ -278,7 +278,6 @@ def _save_odds_ratio_chart(coefficient_table: pd.DataFrame) -> None:
     axis.set_yticklabels(coefficient_table.index)
     axis.set_xscale("log")
     axis.set_xlabel("Odds ratio (log scale), bootstrap 95% interval")
-    axis.set_title("Logistic regression risk-factor associations")
     figure.tight_layout()
     figure.savefig(CHART_DIR / "02_odds_ratios.png", dpi=600)
     plt.close(figure)
@@ -324,7 +323,6 @@ def _save_bayesian_forest_chart(
     axis.set_yticks(positions)
     axis.set_yticklabels([feature_names[index] for index in order])
     axis.set_xlabel("Approximate posterior coefficient, 95% credible interval")
-    axis.set_title("Bayesian logistic-regression approximate posterior effects")
     figure.tight_layout()
     figure.savefig(CHART_DIR / "03_bayesian_posterior_forest.png", dpi=600)
     plt.close(figure)
@@ -367,7 +365,6 @@ def _save_top_bayesian_chart(top_summary: pd.DataFrame) -> None:
     axis.set_xlabel(
         "Approximate posterior anomaly probability, 95% credible interval"
     )
-    axis.set_title("Highest-risk held-out payments: Bayesian uncertainty")
     axis.set_xlim(0, 1)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "04_bayesian_top10_predictions.png", dpi=600)
@@ -387,25 +384,24 @@ def _save_exposure_chart(
         mean_total,
         color=GOLD,
         linewidth=2,
-        label=f"Mean = ${mean_total:,.0f}",
+        label=f"Mean = {mean_total:,.0f} SMU",
     )
     axis.axvline(
         percentile_95,
         color=RED,
         linewidth=2,
         linestyle="--",
-        label=f"95th percentile = ${percentile_95:,.0f}",
+        label=f"95th percentile = {percentile_95:,.0f} SMU",
     )
     axis.axvline(
         percentile_99,
         color="#7A1F14",
         linewidth=2,
         linestyle=":",
-        label=f"99th percentile = ${percentile_99:,.0f}",
+        label=f"99th percentile = {percentile_99:,.0f} SMU",
     )
-    axis.set_xlabel("Aggregate review exposure among held-out alerts (USD)")
+    axis.set_xlabel("Aggregate review exposure among held-out alerts (SMU)")
     axis.set_ylabel("Simulation frequency")
-    axis.set_title("Bootstrap distribution of aggregate flagged exposure")
     axis.legend(fontsize=8.5)
     figure.tight_layout()
     figure.savefig(
@@ -419,22 +415,29 @@ def _save_exposure_chart(
 def _save_working_capital_chart(results: dict[int, np.ndarray]) -> None:
     """Save simulated net-benefit distributions for DPO scenarios."""
     figure, axis = plt.subplots(figsize=(7.2, 4.6))
-    colours = [GOLD, NAVY, RED]
+    styles = [
+    (GOLD, "-"),
+    (NAVY, "--"),
+    (RED, "-."),
+    ]
 
-    for (days, values), colour in zip(results.items(), colours):
+    for (days, values), (colour, line_style) in zip(
+        results.items(), styles
+    ):
         axis.hist(
             values,
             bins=70,
-            alpha=0.55,
-            label=f"DPO +{days} days (mean=${np.mean(values):,.0f})",
+            histtype="step",
+            linewidth=2.2,
+            linestyle=line_style,
+            label=f"DPO +{days} days (mean={np.mean(values):,.0f} SMU)",
             color=colour,
             density=True,
         )
 
     axis.axvline(0, color="#333333", linewidth=1, linestyle="--")
-    axis.set_xlabel("Simulated annual net working-capital benefit (USD)")
+    axis.set_xlabel("Simulated annual net working-capital benefit (SMU)")
     axis.set_ylabel("Density")
-    axis.set_title("Illustrative working-capital scenarios")
     axis.legend(fontsize=8.5)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "06_montecarlo_working_capital.png", dpi=600)
