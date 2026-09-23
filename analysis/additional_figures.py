@@ -22,6 +22,21 @@ from sklearn.model_selection import train_test_split
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+plt.rcParams.update(
+    {
+        "figure.facecolor": "white",
+        "axes.facecolor": "white",
+        "axes.edgecolor": "#333333",
+        "font.family": "Arial",
+        "font.size": 11,
+        "axes.labelsize": 11,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+        "legend.fontsize": 10,
+        "axes.titleweight": "bold",
+    }
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 CHART_DIR = ROOT / "analysis" / "charts"
 CHART_DIR.mkdir(parents=True, exist_ok=True)
@@ -114,103 +129,92 @@ def main() -> None:
     logistic_probability = logistic.predict_proba(x_test)[:, 1]
 
     # 07: Framework architecture.
-    # The architecture is deliberately non-linear: the rule engine and
-    # Isolation Forest are complementary detection branches; the statistical
-    # models and financial simulations are analytical decision-support layers.
-    figure, axis = plt.subplots(figsize=(13.5, 8.2))
+    # Design at final manuscript size: 6.5 inches wide, with 9.5-point text.
+    # Panels preserve the distinction between alerts, statistical analyses,
+    # and the two separate financial decision-support analyses.
+    from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+
+    figure = plt.figure(figsize=(6.5, 7.4))
+    axis = figure.add_axes([0, 0, 1, 1])
+    axis.set_xlim(0, 6.5)
+    axis.set_ylim(0, 7.4)
     axis.axis("off")
 
-    def box(x, y, text, width=0.19, height=0.085, edge=NAVY):
+    def box(cx, cy, text, width, height=0.50):
+        patch = FancyBboxPatch(
+            (cx - width / 2, cy - height / 2),
+            width,
+            height,
+            boxstyle="round,pad=0.025,rounding_size=0.05",
+            facecolor="white",
+            edgecolor=NAVY,
+            linewidth=1.1,
+            zorder=2,
+        )
+        axis.add_patch(patch)
         axis.text(
-            x,
-            y,
-            text,
-            ha="center",
-            va="center",
-            fontsize=10,
-            bbox=dict(
-                boxstyle="round,pad=0.6",
-                facecolor="white",
-                edgecolor=edge,
-                linewidth=1.8,
-            ),
-            transform=axis.transAxes,
+            cx, cy, text,
+            ha="center", va="center",
+            fontsize=9.5, color="#111111",
+            linespacing=1.15, zorder=3,
         )
 
-    def arrow(x1, y1, x2, y2, colour=GOLD):
-        axis.annotate(
-            "",
-            xy=(x2, y2),
-            xytext=(x1, y1),
-            arrowprops=dict(arrowstyle="->", color=colour, linewidth=1.9),
-            xycoords=axis.transAxes,
+    def arrow(start, end):
+        axis.add_patch(
+            FancyArrowPatch(
+                start, end,
+                arrowstyle="-|>",
+                mutation_scale=10,
+                linewidth=1.1,
+                color=NAVY,
+                shrinkA=3,
+                shrinkB=3,
+                zorder=1,
+            )
         )
 
-    # Operational detection layer.
-    box(0.10, 0.82, "Supplier payment\nrecords")
-    box(0.31, 0.82, "Preprocessing +\nfeature engineering")
-    box(0.53, 0.90, "Rule-based\ncontrols")
-    box(0.53, 0.74, "Isolation Forest\nanomaly detection")
-    box(0.73, 0.82, "Hybrid risk score")
-    box(0.91, 0.82, "Alert + explanation\n+ review exposure")
-    arrow(0.17, 0.82, 0.24, 0.82)
-    arrow(0.38, 0.84, 0.46, 0.89)
-    arrow(0.38, 0.80, 0.46, 0.75)
-    arrow(0.60, 0.90, 0.67, 0.84)
-    arrow(0.60, 0.74, 0.67, 0.80)
-    arrow(0.80, 0.82, 0.84, 0.82)
+    # (a) Operational detection: the two score components merge before alerts.
+    axis.text(0.12, 7.18, "(a)", fontsize=11, fontweight="bold", color="#111111")
+    box(3.25, 7.00, "Supplier payment records", 2.85, 0.44)
+    box(3.25, 6.38, "Preprocessing and\nfeature engineering", 2.85, 0.52)
+    box(1.70, 5.63, "Rule-based\ncontrols", 2.45, 0.55)
+    box(4.80, 5.63, "Isolation Forest\nanomaly detection", 2.45, 0.55)
+    box(3.25, 4.90, "Hybrid risk score", 2.85, 0.44)
+    box(3.25, 4.28, "Alert, explanation and review exposure", 3.90, 0.44)
+    arrow((3.25, 6.78), (3.25, 6.64))
+    arrow((2.65, 6.12), (1.70, 5.905))
+    arrow((3.85, 6.12), (4.80, 5.905))
+    arrow((1.70, 5.355), (2.65, 5.12))
+    arrow((4.80, 5.355), (3.85, 5.12))
+    arrow((3.25, 4.68), (3.25, 4.50))
 
-    # Statistical interpretation and uncertainty layer.
-    box(0.10, 0.48, "Labelled synthetic\ntraining data")
-    box(0.44, 0.53, "Logistic regression\n(associations + odds ratios)")
-    box(0.44, 0.39, "Bayesian logistic regression\n(approximate posterior uncertainty)")
-    box(0.84, 0.48, "Held-out predictive\nassessment")
-    arrow(0.18, 0.49, 0.33, 0.53)
-    arrow(0.18, 0.46, 0.33, 0.40)
-    arrow(0.57, 0.53, 0.76, 0.49)
-    arrow(0.59, 0.40, 0.76, 0.46)
+    # (b) Separately fitted models of labelled synthetic anomaly status.
+    axis.plot([0.12, 6.38], [3.89, 3.89], color="#777777", linewidth=0.6)
+    axis.text(0.12, 3.64, "(b)", fontsize=11, fontweight="bold", color="#111111")
+    box(1.15, 3.18, "Labelled synthetic\ntraining data", 1.85, 0.58)
+    box(3.25, 3.53, "Logistic regression\n(associations)", 1.95, 0.48)
+    box(3.25, 2.79, "Bayesian logistic\nregression\n(approximate uncertainty)", 1.95, 0.60)
+    box(5.47, 3.18, "Held-out\npredictive assessment", 1.70, 0.58)
+    arrow((2.075, 3.30), (2.275, 3.53))
+    arrow((2.075, 3.04), (2.275, 2.79))
+    arrow((4.225, 3.53), (4.62, 3.30))
+    arrow((4.225, 2.79), (4.62, 3.04))
 
-    # Financial decision-support layer.
-    box(0.16, 0.19, "Held-out alerted\ntransactions")
-    box(0.49, 0.19, "Bootstrap aggregate\nreview exposure")
-    box(0.16, 0.06, "Ground-truth normal\nsynthetic payments")
-    box(0.49, 0.06, "Working-capital Monte Carlo\n(illustrative DPO assumptions)")
-    box(0.88, 0.13, "Financial decision\nsupport")
-    arrow(0.25, 0.19, 0.39, 0.19)
-    arrow(0.25, 0.06, 0.37, 0.06)
-    arrow(0.59, 0.19, 0.80, 0.15)
-    arrow(0.62, 0.06, 0.80, 0.11)
+    # (c) Separate resampling and working-capital scenario analyses.
+    axis.plot([0.12, 6.38], [2.40, 2.40], color="#777777", linewidth=0.6)
+    axis.text(0.12, 2.15, "(c)", fontsize=11, fontweight="bold", color="#111111")
+    box(1.22, 1.78, "Held-out alerted\ntransactions", 2.00, 0.58)
+    box(1.22, 0.72, "Ground-truth normal\nsynthetic payments", 2.00, 0.58)
+    box(3.43, 1.78, "Bootstrap aggregate\nreview exposure", 1.95, 0.58)
+    box(3.43, 0.72, "Working-capital\nMonte Carlo\n(DPO scenarios)", 1.95, 0.72)
+    box(5.60, 1.25, "Financial\ndecision support", 1.45, 0.60)
+    arrow((2.22, 1.78), (2.455, 1.78))
+    arrow((2.22, 0.72), (2.455, 0.72))
+    arrow((4.405, 1.78), (4.875, 1.40))
+    arrow((4.405, 0.72), (4.875, 1.10))
 
-    axis.text(
-        0.02,
-        0.97,
-        "Operational detection layer",
-        transform=axis.transAxes,
-        fontsize=11,
-        fontweight="bold",
-        color=NAVY,
-    )
-    axis.text(
-        0.02,
-        0.61,
-        "Statistical interpretation and uncertainty layer",
-        transform=axis.transAxes,
-        fontsize=11,
-        fontweight="bold",
-        color=NAVY,
-    )
-    axis.text(
-        0.02,
-        0.29,
-        "Financial decision-support layer",
-        transform=axis.transAxes,
-        fontsize=11,
-        fontweight="bold",
-        color=NAVY,
-    )
-    
-    figure.tight_layout()
-    figure.savefig(CHART_DIR / "07_system_architecture.png", dpi=600, bbox_inches="tight")
+    # Fixed canvas preserves the stated Word dimensions and final font sizes.
+    figure.savefig(CHART_DIR / "07_system_architecture.png", dpi=600, facecolor="white")
     plt.close(figure)
 
     # 08: Dataset composition.
@@ -294,7 +298,7 @@ def main() -> None:
     axis.axhline(y_test.mean(), linestyle="--", linewidth=1, label="Base rate")
     axis.set_xlabel("Recall")
     axis.set_ylabel("Precision")
-    axis.legend(fontsize=8.5)
+    axis.legend(fontsize=10)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "12_precision_recall.png", dpi=600)
     plt.close(figure)
@@ -306,7 +310,14 @@ def main() -> None:
     image = axis.imshow(matrix, cmap="Blues")
     for row in range(2):
         for column in range(2):
-            axis.text(column, row, f"{matrix[row, column]:,}", ha="center", va="center")
+            axis.text(
+                column,
+                row,
+                f"{matrix[row, column]:,}",
+                ha="center",
+                va="center",
+                color="white" if matrix[row, column] > matrix.max() / 2 else "black",
+            )
     axis.set_xticks([0, 1], labels=["No alert", "Alert"])
     axis.set_yticks([0, 1], labels=["Normal", "Anomaly"])
     figure.colorbar(image, ax=axis)

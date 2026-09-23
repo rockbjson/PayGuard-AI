@@ -1,5 +1,5 @@
 """
-Build three flydubai-branded Excel evaluation workbooks:
+Build three PayGuard AI Excel evaluation workbooks:
   1. PayGuard_MonteCarlo_Evaluation.xlsx
   2. PayGuard_Regression_Evaluation.xlsx
   3. PayGuard_Bayesian_Evaluation.xlsx
@@ -63,7 +63,7 @@ def cell(ws, coord, value, bold=False, color="000000", size=10, fill=None,
 
 def title_block(ws, subtitle, ncols=8):
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
-    style_title(ws, "A1", "flydubai  |  PayGuard AI", 16)
+    style_title(ws, "A1", "PayGuard AI", 16)
     ws["A1"].fill = hfill(NAVY); ws["A1"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
     ws.row_dimensions[1].height = 30
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=ncols)
@@ -78,10 +78,14 @@ LEGEND = ("Legend:  blue text = editable input   •   yellow fill = key assumpt
 # =====================================================================
 # 1. MONTE CARLO WORKBOOK
 # =====================================================================
+N_SIMULATIONS = 20_000
+
 def build_montecarlo():
     mc = json.load(open(DATA / "montecarlo.json"))
     exp = pd.read_csv(DATA / "flagged_exposures.csv")["review_exposure"].to_numpy()
-    n_flag = mc["n_flagged"]; clean_spend = mc["annualised_clean_spend"]
+    n_flag = int(mc["n_flagged"]); clean_spend = mc["annualised_clean_spend"]
+    if n_flag != len(exp) or n_flag == 0:
+        raise ValueError("Flagged count must match the nonempty exposure vector.")
 
     wb = Workbook()
 
@@ -94,19 +98,20 @@ def build_montecarlo():
         "This workbook lets you re-run two Monte Carlo simulations live inside Excel.",
         "Sheet 'MC Exposure': bootstrap of flagged-payment review exposure -> mean and tail percentiles.",
         "Sheet 'MC Working Capital': net benefit of extending Days Payable Outstanding (DPO).",
-        "Every simulation cell uses RAND(); press F9 to draw a fresh set of scenarios.",
+        "Both simulations use 20,000 rows; press F9 to draw fresh scenarios (calculation may take time).",
+        "Defaults match the paper's distributions; Excel draws are independent of Python's seed-42 run.",
         "Editable inputs are in blue with yellow fill. Change them and the summaries update.",
         "All data are SYNTHETIC. Cost-of-capital, discount and friction assumptions are illustrative",
-        "placeholders — replace with flydubai treasury-approved figures before any operational use.",
+        "placeholders — calibrate using organisation-specific evidence before operational use.",
     ]
     for i, n in enumerate(notes):
         cell(ws, f"A{5+i}", "•  " + n, border=False, size=10)
-    cell(ws, "A13", LEGEND, border=False, italic=True, size=9, color="666666")
+    cell(ws, "A14", LEGEND, border=False, italic=True, size=9, color="666666")
     cell(ws, "A15", "Reference inputs (from the PayGuard analysis)", bold=True, size=11, color=NAVY, border=False)
     ref = [("Flagged payments (n)", n_flag, "0"),
-           ("Sum of review exposure (USD)", mc["review_exposure_sum_ref"], "$#,##0"),
-           ("Mean review exposure (USD)", mc["review_exposure_mean_ref"], "$#,##0"),
-           ("Annualised clean-spend proxy (USD)", clean_spend, "$#,##0")]
+           ("Sum of review exposure (SMU)", mc["review_exposure_sum_ref"], '#,##0 "SMU"'),
+           ("Mean review exposure (SMU)", mc["review_exposure_mean_ref"], '#,##0 "SMU"'),
+           ("Annualised clean-spend proxy (SMU)", clean_spend, '#,##0 "SMU"')]
     for i, (lab, val, fmt) in enumerate(ref):
         cell(ws, f"A{16+i}", lab, size=10)
         cell(ws, f"C{16+i}", val, size=10, nfmt=fmt, align="right")
@@ -121,9 +126,10 @@ def build_montecarlo():
          border=False, italic=True, size=9, color="666666")
 
     # controls
-    cell(we, "A6", "Simulations (N)", bold=True, size=10, fill=GOLD)
-    cell(we, "B6", 1000, color=BLUEINK, bold=True, nfmt="0", align="center", fill="FFF6D5")
-    we["B6"].comment = Comment("Number of bootstrap resamples (rows in the sim table). 1000 default.", "PayGuard")
+    cell(we, "A6", "Simulation rows (fixed)", bold=True, size=10)
+    cell(we, "B6", f"=ROWS(C11:C{10 + N_SIMULATIONS})",
+         color="000000", nfmt="0", align="center")
+    we["B6"].comment = Comment("Display only. Change N_SIMULATIONS in build_workbooks.py and rebuild to change the number of rows.", "PayGuard")
     cell(we, "A7", "Flagged count (n)", bold=True, size=10, fill=GOLD)
     cell(we, "B7", n_flag, color="000000", nfmt="0", align="center")
 
@@ -131,25 +137,20 @@ def build_montecarlo():
     cell(we, "H5", "Flagged exposures (source)", bold=True, size=9, color=NAVY, border=False)
     for i, v in enumerate(exp):
         c = we.cell(row=6+i, column=8, value=float(v))
-        c.number_format = "$#,##0"; c.font = Font(name="Arial", size=8, color="888888")
+        c.number_format = '#,##0 "SMU"'; c.font = Font(name="Arial", size=8, color="888888")
     last_exp_row = 6 + len(exp) - 1
     we.column_dimensions["H"].width = 14
 
-    # simulation table: each row = one bootstrap total using SUMPRODUCT of random picks is heavy;
-    # instead each sim row picks n random exposures via AVERAGE of INDEX over RANDBETWEEN * n.
-    # Practical approach: total ≈ n * mean(random sample). We approximate the sum by sampling
-    # n draws per row using a helper of 30 representative random picks scaled — but to stay exact,
-    # we use: total_row = SUM over a fixed set. Simpller + valid: draw n picks is too many cells.
-    # We use the bootstrap-of-the-mean identity: sample mean * n, with sample mean estimated from
-    # k random draws (k=40) — clearly labelled as an approximation of the resample sum.
+    # Each bootstrap replicate draws exactly n_flag exposures with replacement.
+    # Its total is n_flag times that SAME sample's mean, equal to its sum.
     cell(we, "A9", "Simulation table (each row = one resampled portfolio total)", bold=True, size=10, color=NAVY, border=False)
-    header_row(we, 10, ["Sim #", "Resample mean (USD)", "Portfolio total = mean × n (USD)"], start_col=1)
+    header_row(we, 10, ["Sim #", "Resample mean (SMU)", "Portfolio total = mean × n (SMU)"], start_col=1)
     we.column_dimensions["A"].width = 10
     we.column_dimensions["B"].width = 22; we.column_dimensions["C"].width = 26
 
-    NSIM = 1000
-    k = 150  # picks per row to estimate the resample mean (higher k = closer to true n-pick resample)
-    # build k INDEX picks inline in a single AVERAGE formula
+    NSIM = N_SIMULATIONS
+    k = n_flag
+    # Build exactly n_flag INDEX picks in one AVERAGE formula.
     def pick():
         return f"INDEX($H$6:$H${last_exp_row},RANDBETWEEN(1,$B$7))"
     avg_formula = "=AVERAGE(" + ",".join([pick() for _ in range(k)]) + ")"
@@ -157,14 +158,12 @@ def build_montecarlo():
         row = 11 + r
         cell(we, f"A{row}", r+1, size=8, align="center", nfmt="0")
         c = we[f"B{row}"]; c.value = avg_formula
-        c.number_format = "$#,##0"; c.font = Font(name="Arial", size=8); c.border = border_all
+        c.number_format = '#,##0 "SMU"'; c.font = Font(name="Arial", size=8); c.border = border_all
         c2 = we[f"C{row}"]; c2.value = f"=B{row}*$B$7"
-        c2.number_format = "$#,##0"; c2.font = Font(name="Arial", size=8); c2.border = border_all
+        c2.number_format = '#,##0 "SMU"'; c2.font = Font(name="Arial", size=8); c2.border = border_all
     sim_first, sim_last = 11, 11 + NSIM - 1
 
     # summary block
-    cell(we, "A6", "SUMMARY", bold=True, size=11, color=WHITE, fill=NAVY, align="center")
-    we.merge_cells("A6:A6")
     scol = 5  # place summary in E:F
     summ = [
         ("Mean total exposure", f"=AVERAGE(C{sim_first}:C{sim_last})"),
@@ -180,7 +179,7 @@ def build_montecarlo():
         r = 10 + i
         cell(we, f"E{r}", lab, size=10, bold=(i in (0,3,5)))
         c = we[f"F{r}"]; c.value = f
-        c.number_format = "$#,##0"; c.border = border_all
+        c.number_format = '#,##0 "SMU"'; c.border = border_all
         c.font = Font(name="Arial", size=10, bold=(i in (0,3,5)),
                       color=RED if i in (3,4,5) else "000000")
     we.column_dimensions["E"].width = 34; we.column_dimensions["F"].width = 18
@@ -198,24 +197,29 @@ def build_montecarlo():
     cell(ww, "A6", "ASSUMPTIONS (editable)", bold=True, size=11, color=WHITE, fill=NAVY)
     ww.merge_cells("A6:C6")
     assum = [
-        ("Annual spend proxy (USD)", clean_spend, "$#,##0", False),
+        ("Annual spend proxy (SMU)", clean_spend, '#,##0 "SMU"', False),
         ("DPO extension Δ (days)", 20, "0", True),
         ("Cost of capital — mean", 0.09, "0.0%", True),
         ("Cost of capital — std dev", 0.015, "0.0%", True),
         ("Discount-capture share (mean)", 0.30, "0.0%", True),
         ("Early-payment discount rate", 0.02, "0.0%", True),
         ("Discount erosion fraction (mean)", 0.40, "0.0%", True),
-        ("Late-friction probability (mean)", 0.05, "0.0%", True),
+        ("Late-friction probability (mean)", 2 / 42, "0.0%", True),
         ("Late-friction cost %", 0.015, "0.0%", True),
-        ("Simulations (N)", 1000, "0", True),
+        ("Simulation rows (fixed)", f"=ROWS(M9:M{8 + N_SIMULATIONS})", "0", False),
     ]
     for i, (lab, val, fmt, lever) in enumerate(assum):
         r = 7 + i
         cell(ww, f"A{r}", lab, size=10, fill=(GOLD if lever else None), bold=lever)
         c = ww[f"C{r}"]; c.value = val; c.number_format = fmt
         c.border = border_all; c.alignment = Alignment(horizontal="right")
-        c.font = Font(name="Arial", size=10, color=BLUEINK, bold=True)
+        c.font = Font(name="Arial", size=10, color=BLUEINK if lever else "000000", bold=lever)
         if lever: c.fill = hfill("FFF6D5")
+    ww["C12"].comment = Comment("Mean of a clipped Normal draw; SD 0.004, bounds 0.005 to 0.05.", "PayGuard")
+    ww["C15"].comment = Comment("Mean of a clipped Normal draw; SD 0.005, bounds 0 to 0.05.", "PayGuard")
+    ww["C16"].comment = Comment("Display only. Set N_SIMULATIONS in build_workbooks.py and rebuild to change the row count.", "PayGuard")
+    for address, concentration in [("C11", 20), ("C13", 10), ("C14", 42)]:
+        ww[address].comment = Comment(f"Beta mean m; alpha={concentration}*m, beta={concentration}*(1-m). Enter 0 < m < 1.", "PayGuard")
     # cell refs
     R = {lab.split(" (")[0].split(" —")[0]: f"$C${7+i}" for i,(lab,_,_,_) in enumerate(assum)}
     SPEND=R["Annual spend proxy"]; DDAYS=R["DPO extension Δ"]
@@ -234,30 +238,31 @@ def build_montecarlo():
     header_row(ww, 8, heads, start_col=5)
     for i, w in enumerate([7,11,11,10,11,14,13,12,14]):
         ww.column_dimensions[get_column_letter(5+i)].width = w
-    NSIM2 = 1000
+    NSIM2 = N_SIMULATIONS
     for r in range(NSIM2):
         row = 9 + r
         cell(ww, f"E{row}", r+1, size=8, align="center", nfmt="0")
-        # random draws
-        # random draws (approximating the Python beta-distribution assumptions)
-        coc = f"MAX(0.03,MIN(0.18,NORMINV(RAND(),{COCM},{COCS})))"
-        # capture share: mean-centred, modest spread (approx Beta(6,14) sd~0.10)
-        dcap = f"MAX(0.02,MIN(0.9,NORMINV(RAND(),{DCAP},0.10)))"
-        # erosion fraction: mean-centred (approx Beta(4,6) sd~0.15)
-        eros = f"MAX(0.02,MIN(0.98,NORMINV(RAND(),{DEROS},0.15)))"
-        # late-friction probability: small, right-skewed (approx Beta(2,40) mean~0.048, sd~0.033)
-        lprob = f"MAX(0,NORMINV(RAND(),{LPROB},0.033))"
-        def put(col, formula, fmt="$#,##0", size=8, color="000000"):
+        # At the displayed default means these beta draws are exactly
+        # Beta(6,14), Beta(4,6), and Beta(2,40). Editable means retain
+        # concentrations 20, 10, and 42; set each mean strictly between 0 and 1.
+        u = "MAX(1E-12,RAND())"
+        coc = f"MAX(0.03,MIN(0.18,NORMINV({u},{COCM},{COCS})))"
+        dcap = f"BETAINV({u},20*{DCAP},20*(1-{DCAP}))"
+        eros = f"BETAINV({u},10*{DEROS},10*(1-{DEROS}))"
+        lprob = f"BETAINV({u},42*{LPROB},42*(1-{LPROB}))"
+        drate = f"MAX(0.005,MIN(0.05,NORMINV({u},{DRATE},0.004)))"
+        fcost = f"MAX(0,MIN(0.05,NORMINV({u},{LCOST},0.005)))"
+        def put(col, formula, fmt='#,##0 "SMU"', size=8, color="000000"):
             c = ww[f"{col}{row}"]; c.value = formula; c.number_format = fmt
             c.font = Font(name="Arial", size=size, color=color); c.border = border_all
         put("F", f"={coc}", "0.0%")
         put("G", f"={dcap}", "0.0%")
         put("H", f"={eros}", "0.0%")
         put("I", f"={lprob}", "0.0%")
-        put("J", f"=({SPEND}*{DDAYS}/365)*F{row}", "$#,##0")
-        put("K", f"={SPEND}*G{row}*{DRATE}*H{row}", "$#,##0")
-        put("L", f"={SPEND}*I{row}*{LCOST}", "$#,##0")
-        put("M", f"=J{row}-K{row}-L{row}", "$#,##0", color="000000")
+        put("J", f"=({SPEND}*{DDAYS}/365)*F{row}", '#,##0 "SMU"')
+        put("K", f"={SPEND}*G{row}*({drate})*H{row}", '#,##0 "SMU"')
+        put("L", f"={SPEND}*I{row}*({fcost})", '#,##0 "SMU"')
+        put("M", f"=J{row}-K{row}-L{row}", '#,##0 "SMU"', color="000000")
     sf, sl = 9, 9+NSIM2-1
 
     # summary
@@ -265,10 +270,10 @@ def build_montecarlo():
     cell(ww, "A19", "RESULTS", bold=True, size=11, color=WHITE, fill=ORANGE)
     ww.merge_cells("A19:C19")
     res = [
-        ("Mean net benefit", f"=AVERAGE(M{sf}:M{sl})", "$#,##0"),
-        ("P10", f"=PERCENTILE(M{sf}:M{sl},0.10)", "$#,##0"),
-        ("Median (P50)", f"=MEDIAN(M{sf}:M{sl})", "$#,##0"),
-        ("P90", f"=PERCENTILE(M{sf}:M{sl},0.90)", "$#,##0"),
+        ("Mean net benefit", f"=AVERAGE(M{sf}:M{sl})", '#,##0 "SMU"'),
+        ("P10", f"=PERCENTILE(M{sf}:M{sl},0.10)", '#,##0 "SMU"'),
+        ("Median (P50)", f"=MEDIAN(M{sf}:M{sl})", '#,##0 "SMU"'),
+        ("P90", f"=PERCENTILE(M{sf}:M{sl},0.90)", '#,##0 "SMU"'),
         ("P(net benefit > 0)", f"=COUNTIF(M{sf}:M{sl},\">0\")/COUNT(M{sf}:M{sl})", "0.0%"),
     ]
     for i,(lab,f,fmt) in enumerate(res):
@@ -417,6 +422,7 @@ def build_bayesian():
         "Sheet 'Bayesian Scorer': enter a transaction -> probability with a 95% approximate credible interval,",
         "   computed live across posterior draws from the fitted ADVI approximation.",
         "Sheet 'Posterior Draws': sampled coefficient vectors from the approximate posterior powering the scorer.",
+        "The interactive scorer uses 2,000 of the 4,000 saved posterior draws used for manuscript summaries.",
         "This is the key advantage over the point-estimate regression: every prediction carries",
         "its own uncertainty band, so borderline cases are visibly distinguished from confident ones.",
     ]
@@ -536,7 +542,7 @@ def build_bayesian():
         if fill: c.fill=hfill(fill)
     cell(wsc, f"A{rr+6}", "Example: a fairly ordinary payment — expect a low mean probability with a tight credible interval.",
          border=False, italic=True, size=9, color="666666")
-    cell(wsc, f"A{rr+7}", "Try setting bank_change = 1: the mean jumps toward ~100% and the interval stays tight (high confidence).",
+    cell(wsc, f"A{rr+7}", "Vary the six displayed inputs to explore probabilities under the fitted approximate posterior.",
          border=False, italic=True, size=9, color="666666")
 
     path = OUT / "PayGuard_Bayesian_Evaluation.xlsx"

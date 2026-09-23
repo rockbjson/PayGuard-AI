@@ -69,7 +69,12 @@ plt.rcParams.update(
         "figure.facecolor": "white",
         "axes.facecolor": "white",
         "axes.edgecolor": "#333333",
-        "font.size": 10.5,
+        "font.family": "Arial",
+        "font.size": 11,
+        "axes.labelsize": 11,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+        "legend.fontsize": 10,
         "axes.titleweight": "bold",
     }
 )
@@ -246,7 +251,7 @@ def _save_roc_chart(
     axis.plot([0, 1], [0, 1], "--", color="#BBBBBB", linewidth=1)
     axis.set_xlabel("False Positive Rate")
     axis.set_ylabel("True Positive Rate")
-    axis.legend(loc="lower right", fontsize=8.5)
+    axis.legend(loc="lower right", fontsize=10)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "01_roc_comparison.png", dpi=600)
     plt.close(figure)
@@ -402,7 +407,7 @@ def _save_exposure_chart(
     )
     axis.set_xlabel("Aggregate review exposure among held-out alerts (SMU)")
     axis.set_ylabel("Simulation frequency")
-    axis.legend(fontsize=8.5)
+    axis.legend(fontsize=10)
     figure.tight_layout()
     figure.savefig(
     CHART_DIR / "05_bootstrap_review_exposure.png",
@@ -438,7 +443,7 @@ def _save_working_capital_chart(results: dict[int, np.ndarray]) -> None:
     axis.axvline(0, color="#333333", linewidth=1, linestyle="--")
     axis.set_xlabel("Simulated annual net working-capital benefit (SMU)")
     axis.set_ylabel("Density")
-    axis.legend(fontsize=8.5)
+    axis.legend(fontsize=10)
     figure.tight_layout()
     figure.savefig(CHART_DIR / "06_montecarlo_working_capital.png", dpi=600)
     plt.close(figure)
@@ -468,7 +473,10 @@ def _sanitize_for_json(value: Any) -> Any:
 
 def main() -> None:
     """Run the complete held-out statistical analysis."""
-    results: dict[str, Any] = {}
+    results: dict[str, Any] = {
+        "monetary_unit": "SMU (common synthetic base unit)",
+        "unit_note": "Legacy keys ending in _usd refer to SMU under fixed illustrative conversion factors.",
+    }
 
     # ------------------------------------------------------------------
     # 0. Data loading and held-out detector evaluation
@@ -753,7 +761,7 @@ def main() -> None:
     results["bayesian"] = {
         "model": "Bayesian logistic regression using mean-field ADVI",
         "features": BAYES_COLUMNS,
-        "excluded_complete_separation_features": BAYES_EXCLUDED_SEPARATING_COLUMNS,
+        "excluded_deterministic_indicator_features": BAYES_EXCLUDED_SEPARATING_COLUMNS,
         "priors": {
             "intercept": "Normal(0, 2.5)",
             "coefficients": "Normal(0, 1.5)",
@@ -828,10 +836,10 @@ def main() -> None:
     }
 
     print(
-        f"  Flagged exposure: mean=${mean_total:,.0f}; "
-        f"P95=${percentile_95:,.0f}; "
-        f"P99=${percentile_99:,.0f}; "
-        f"conditional mean above P95=${conditional_mean_95:,.0f}"
+        f"  Flagged exposure: mean={mean_total:,.0f} SMU; "
+        f"P95={percentile_95:,.0f} SMU; "
+        f"P99={percentile_99:,.0f} SMU; "
+        f"conditional mean above P95={conditional_mean_95:,.0f} SMU"
     )
 
     _save_exposure_chart(
@@ -940,7 +948,7 @@ def main() -> None:
 
     for days, values in working_capital_results.items():
         print(
-            f"  DPO +{days} days: mean net benefit=${np.mean(values):,.0f}; "
+            f"  DPO +{days} days: mean net benefit={np.mean(values):,.0f} SMU; "
             f"P(net positive)={(values > 0).mean():.1%}"
         )
 

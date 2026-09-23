@@ -16,6 +16,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.preprocessing import RobustScaler
+from payguard.data_generator import FX_TO_USD
 
 
 RULE_WEIGHTS = {
@@ -314,11 +315,20 @@ def _add_exposure_fields(
     * review_exposure: the amount displayed for prioritisation. It uses direct
       exposure when available; otherwise it uses scenario exposure.
     """
+    # Fixed illustrative conversion factors define one common synthetic base
+    # unit (SMU). Convert each amount using its own currency before comparing.
+    payment_factor = scored["payment_currency"].map(FX_TO_USD)
+    invoice_factor = scored["invoice_currency"].map(FX_TO_USD)
+    if payment_factor.isna().any() or invoice_factor.isna().any():
+        raise ValueError("Unsupported currency in review-exposure calculation.")
+    paid_smu = (scored["paid_amount"] * payment_factor).round(2)
+    invoice_smu = (scored["invoice_amount"] * invoice_factor).round(2)
+
     scored["overpayment_exposure"] = (
-        scored["paid_amount"] - scored["invoice_amount"]
+        paid_smu - invoice_smu
     ).clip(lower=0).round(2)
 
-    scored["duplicate_candidate_exposure"] = scored["paid_amount"].where(
+    scored["duplicate_candidate_exposure"] = paid_smu.where(
         duplicate_candidate,
         0.0,
     ).round(2)
@@ -330,7 +340,7 @@ def _add_exposure_fields(
 
     scenario_eligible = scored["alert"] & scored["direct_exposure"].eq(0)
     scored["scenario_exposure"] = (
-        scored["paid_amount"]
+        paid_smu
         * (scored["risk_score"] / 100)
         * SCENARIO_LOSS_GIVEN_ALERT
     ).where(scenario_eligible, 0.0).round(2)

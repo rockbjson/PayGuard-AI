@@ -56,7 +56,7 @@ c1.metric("Transactions analysed", f"{len(scored):,}")
 c2.metric("Alerts", f"{int(scored['alert'].sum()):,}", f"{metrics['alert_rate']:.1%} of records")
 c3.metric(
     "Review exposure",
-    f"${scored.loc[scored['alert'], 'review_exposure'].sum():,.0f}",
+    f"{scored.loc[scored['alert'], 'review_exposure'].sum():,.0f} SMU",
     help=(
         "Prioritisation amount. It uses directly measurable duplicate or "
         "overpayment exposure where available; otherwise it uses an "
@@ -112,16 +112,16 @@ st.dataframe(
     column_config={
         "risk_score": st.column_config.ProgressColumn("Risk", min_value=0, max_value=100),
         "overpayment_exposure": st.column_config.NumberColumn(
-            "Overpayment exposure", format="$%.2f"
+            "Overpayment exposure", format="%.2f SMU"
         ),
         "duplicate_candidate_exposure": st.column_config.NumberColumn(
-            "Duplicate exposure", format="$%.2f"
+            "Duplicate exposure", format="%.2f SMU"
         ),
         "scenario_exposure": st.column_config.NumberColumn(
-            "Scenario exposure", format="$%.2f"
+            "Scenario exposure", format="%.2f SMU"
         ),
         "review_exposure": st.column_config.NumberColumn(
-            "Review exposure", format="$%.2f"
+            "Review exposure", format="%.2f SMU"
         ),
     },
 )

@@ -205,7 +205,7 @@ def main() -> None:
     bayesian = {
         "model": "Bayesian logistic regression using mean-field ADVI",
         "features": BAYES_COLUMNS,
-        "excluded_complete_separation_features": [
+        "excluded_deterministic_indicator_features": [
             "bank_change",
             "currency_mismatch",
         ],

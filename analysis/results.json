@@ -1,4 +1,6 @@
 {
+  "monetary_unit": "SMU (common synthetic base unit)",
+  "unit_note": "Legacy keys ending in _usd refer to SMU under fixed illustrative conversion factors.",
   "baseline_hybrid_metrics": {
     "precision": 0.8484848484848485,
     "recall": 0.6666666666666666,
@@ -173,7 +175,7 @@
       "terms_deviation",
       "weekend"
     ],
-    "excluded_complete_separation_features": [
+    "excluded_deterministic_indicator_features": [
       "bank_change",
       "currency_mismatch"
     ],
@@ -336,12 +338,12 @@
     "interpretation": "Bootstrap distribution of aggregate review exposure among held-out flagged payments; this is not a calibrated fraud-loss model.",
     "n_simulations": 20000,
     "n_flagged_payments": 66,
-    "mean_total_exposure_usd": 239221.29980699997,
-    "p5_usd": 171788.46949999998,
-    "median_usd": 234750.81,
-    "percentile_95_usd": 321995.03449999995,
-    "percentile_99_usd": 366775.6672999997,
-    "conditional_mean_above_95_usd": 348795.41608000005
+    "mean_total_exposure_usd": 302564.31787250005,
+    "p5_usd": 147400.3625,
+    "median_usd": 286918.225,
+    "percentile_95_usd": 514441.049,
+    "percentile_99_usd": 634442.9311999993,
+    "conditional_mean_above_95_usd": 587256.5965399999
   },
   "monte_carlo_working_capital": {
     "interpretation": "Illustrative synthetic oracle scenario using known normal labels. Assumptions are not calibrated to a real organisation.",
